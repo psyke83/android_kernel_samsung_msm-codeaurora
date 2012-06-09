@@ -8,6 +8,8 @@
 #include "keypad-lucas.c"
 #elif defined(CONFIG_MACH_CALLISTO)
 #include "keypad-callisto.c"
+#elif defined(CONFIG_MACH_EUROPA)
+#include "keypad-callisto.c"
 #else
 #endif
 
