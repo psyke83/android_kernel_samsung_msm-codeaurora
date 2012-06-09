@@ -106,7 +106,13 @@ struct kgsl_driver {
 	   platform */
 
 	unsigned int pt_va_size;
-	struct dma_pool *ptpool;
+	struct {
+		unsigned long *bitmap;
+		int entries;
+		spinlock_t lock;
+		void *hostptr;
+		unsigned int physaddr;
+	} ptpool;
 };
 
 extern struct kgsl_driver kgsl_driver;

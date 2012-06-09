@@ -702,6 +702,7 @@ kgsl_yamato_init(struct kgsl_device *device)
 	}
 
 	device->flags &= ~KGSL_FLAGS_SOFT_RESET;
+	wake_lock_init(&device->idle_wakelock, WAKE_LOCK_IDLE, device->name);
 	return 0;
 
 error_close_rb:
@@ -755,6 +756,7 @@ int kgsl_yamato_close(struct kgsl_device *device)
 		device->work_queue = NULL;
 	}
 
+	wake_lock_destroy(&device->idle_wakelock);
 	KGSL_DRV_VDBG("return %d\n", 0);
 	return 0;
 }
@@ -1258,6 +1260,12 @@ static int kgsl_yamato_waittimestamp(struct kgsl_device *device,
 		else if (status == 0) {
 			if (!kgsl_check_timestamp(device, timestamp)) {
 				status = -ETIMEDOUT;
+					 KGSL_DRV_ERR( "Device hang detected while waiting "
+									 "for timestamp: %x, last "
+									 "submitted(rb->timestamp): %x, wptr: "
+									 "%x\n", timestamp,
+									 yamato_device->ringbuffer.timestamp,
+									 yamato_device->ringbuffer.wptr);
 				kgsl_postmortem_dump(device);
 			}
 		}
@@ -1305,6 +1313,11 @@ static long kgsl_yamato_ioctl(struct kgsl_device_private *dev_priv,
 
 }
 
+/*** QCOM DEBUG CODE ***/
+extern struct kgsl_functable stored_ftbl;
+void kgsl_print_ftbl(struct kgsl_functable *ftbl);
+/*** QCOM DEBUG CODE ***/
+
 int kgsl_yamato_getfunctable(struct kgsl_functable *ftbl)
 {
 	if (ftbl == NULL)
@@ -1327,6 +1340,12 @@ int kgsl_yamato_getfunctable(struct kgsl_functable *ftbl)
 	ftbl->device_ioctl = kgsl_yamato_ioctl;
 	ftbl->device_setup_pt = kgsl_yamato_setup_pt;
 	ftbl->device_cleanup_pt = kgsl_yamato_cleanup_pt;
+
+    /*** QCOM DEBUG CODE ***/
+    memcpy(&stored_ftbl, ftbl, sizeof(struct kgsl_functable));
+    KGSL_DRV_ERR("Original ftbl:\n");
+    kgsl_print_ftbl(ftbl);
+    /*** QCOM DEBUG CODE ***/
 
 	return KGSL_SUCCESS;
 }

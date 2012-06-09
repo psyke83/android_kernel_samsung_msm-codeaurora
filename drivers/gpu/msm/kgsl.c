@@ -29,7 +29,7 @@
 #include <linux/vmalloc.h>
 #include <linux/notifier.h>
 #include <linux/pm_runtime.h>
-#include <linux/dmapool.h>
+
 #include <asm/atomic.h>
 
 #include <linux/ashmem.h>
@@ -198,10 +198,49 @@ int kgsl_check_timestamp(struct kgsl_device *device, unsigned int timestamp)
 	return timestamp_cmp(ts_processed, timestamp);
 }
 
+/*** QCOM DEBUG CODE ***/
+extern int ringbuffer_protected_mode_flag;
+struct kgsl_functable stored_ftbl;
+
+void kgsl_print_ftbl(struct kgsl_functable *ftbl)
+{
+    KGSL_DRV_ERR("device_regread = 0x%p\n", ftbl->device_regread);
+    KGSL_DRV_ERR("device_setstate = 0x%p\n", ftbl->device_setstate);
+    KGSL_DRV_ERR("device_idle = 0x%p\n", ftbl->device_idle);
+    KGSL_DRV_ERR("device_isidle = 0x%p\n", ftbl->device_isidle);
+    KGSL_DRV_ERR("device_suspend_context = 0x%p\n", ftbl->device_suspend_context);
+    KGSL_DRV_ERR("device_resume_context = 0x%p\n", ftbl->device_resume_context);
+    KGSL_DRV_ERR("device_start = 0x%p\n", ftbl->device_start);
+    KGSL_DRV_ERR("device_stop = 0x%p\n", ftbl->device_stop);
+    KGSL_DRV_ERR("device_getproperty = 0x%p\n", ftbl->device_getproperty);
+    KGSL_DRV_ERR("device_waittimestamp = 0x%p\n", ftbl->device_waittimestamp);
+    KGSL_DRV_ERR("device_cmdstream_readtimestamp = 0x%p\n", ftbl->device_cmdstream_readtimestamp);
+    KGSL_DRV_ERR("device_issueibcmds = 0x%p\n", ftbl->device_issueibcmds);
+    KGSL_DRV_ERR("device_drawctx_create = 0x%p\n", ftbl->device_drawctxt_create);
+    KGSL_DRV_ERR("device_drawctx_destroy = 0x%p\n", ftbl->device_drawctxt_destroy);
+    KGSL_DRV_ERR("device_ioctl = 0x%p\n", ftbl->device_ioctl);
+    KGSL_DRV_ERR("device_setup_pt = 0x%p\n", ftbl->device_setup_pt);
+    KGSL_DRV_ERR("device_cleanup_pt = 0x%p\n", ftbl->device_cleanup_pt);
+}
+/*** QCOM DEBUG CODE ***/
+
 int kgsl_regread(struct kgsl_device *device, unsigned int offsetwords,
 			unsigned int *value)
 {
 	int status = -ENXIO;
+
+    /*** QCOM DEBUG CODE ***/
+    if (ringbuffer_protected_mode_flag)
+    {
+        if (memcmp(&stored_ftbl, &device->ftbl, sizeof(struct kgsl_functable)));
+        {
+            KGSL_DRV_ERR("function table corruption\n");
+            //kgsl_print_ftbl(&device->ftbl);
+            //kgsl_print_ftbl(&stored_ftbl);
+        }
+		ringbuffer_protected_mode_flag = 0;
+    }
+    /*** QCOM DEBUG CODE ***/
 
 	if (device->ftbl.device_regread)
 		status = device->ftbl.device_regread(device, offsetwords,
@@ -1880,6 +1919,69 @@ error_class_create:
 	return err;
 }
 
+static void
+kgsl_ptpool_cleanup(void)
+{
+	int size = kgsl_driver.ptpool.entries * kgsl_driver.ptsize;
+
+	if (kgsl_driver.ptpool.hostptr)
+		dma_free_coherent(NULL, size, kgsl_driver.ptpool.hostptr,
+				  kgsl_driver.ptpool.physaddr);
+
+
+	kfree(kgsl_driver.ptpool.bitmap);
+
+	memset(&kgsl_driver.ptpool, 0, sizeof(kgsl_driver.ptpool));
+}
+
+/* Allocate memory and structures for the pagetable pool */
+
+static int __devinit
+kgsl_ptpool_init(void)
+{
+	int size = kgsl_driver.ptpool.entries * kgsl_driver.ptsize;
+
+	if (size > SZ_4M) {
+		size = SZ_4M;
+		kgsl_driver.ptpool.entries = SZ_4M / kgsl_driver.ptsize;
+		KGSL_DRV_ERR("Page table pool too big.  Limiting to "
+			"%d processes\n", kgsl_driver.ptpool.entries);
+	}
+
+	/* Allocate a large chunk of memory for the page tables */
+
+	kgsl_driver.ptpool.hostptr =
+		dma_alloc_coherent(NULL, size, &kgsl_driver.ptpool.physaddr,
+				   GFP_KERNEL);
+
+	if (kgsl_driver.ptpool.hostptr == NULL) {
+		KGSL_DRV_ERR("pagetable init failed\n");
+		return -ENOMEM;
+	}
+
+	/* Allocate room for the bitmap */
+
+	kgsl_driver.ptpool.bitmap =
+		kzalloc((kgsl_driver.ptpool.entries / BITS_PER_BYTE) + 1,
+			GFP_KERNEL);
+
+	if (kgsl_driver.ptpool.bitmap == NULL) {
+		KGSL_DRV_ERR("pagetable init failed\n");
+		dma_free_coherent(NULL, size, kgsl_driver.ptpool.hostptr,
+				  kgsl_driver.ptpool.physaddr);
+		return -ENOMEM;
+	}
+
+	/* Clear the memory at init time - this saves us having to do
+	   it as page tables are allocated */
+
+	memset(kgsl_driver.ptpool.hostptr, 0, size);
+
+	spin_lock_init(&kgsl_driver.ptpool.lock);
+
+	return 0;
+}
+
 static int __devinit kgsl_platform_probe(struct platform_device *pdev)
 {
 	int i, result = 0;
@@ -1930,10 +2032,12 @@ static int __devinit kgsl_platform_probe(struct platform_device *pdev)
 	kgsl_driver.ptsize = ALIGN(kgsl_driver.ptsize, KGSL_PAGESIZE);
 
 	kgsl_driver.pt_va_size = pdata->pt_va_size;
+	kgsl_driver.ptpool.entries = pdata->pt_max_count;
 
-	kgsl_driver.ptpool = dma_pool_create("kgsl-ptpool", NULL,
-					     kgsl_driver.ptsize,
-					     4096, 0);
+	result = kgsl_ptpool_init();
+
+	if (result != 0)
+		goto done;
 
 	result = kgsl_drm_init(pdev);
 
@@ -2002,6 +2106,7 @@ static int kgsl_platform_remove(struct platform_device *pdev)
 {
 	pm_runtime_disable(&pdev->dev);
 
+	kgsl_ptpool_cleanup();
 	kgsl_driver_cleanup();
 	kgsl_drm_exit();
 	kgsl_device_unregister();

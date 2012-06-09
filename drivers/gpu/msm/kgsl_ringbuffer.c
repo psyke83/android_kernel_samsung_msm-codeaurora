@@ -68,6 +68,9 @@ inline unsigned int kgsl_ringbuffer_sizelog2quadwords(unsigned int sizedwords)
 	return sizelog2quadwords;
 }
 
+/*** QCOM DEBUG CODE ***/
+int ringbuffer_protected_mode_flag = 0;
+/*** QCOM DEBUG CODE ***/
 
 /* functions */
 void kgsl_cp_intrcallback(struct kgsl_device *device)
@@ -123,6 +126,9 @@ void kgsl_cp_intrcallback(struct kgsl_device *device)
 	}
 	if (status & CP_INT_CNTL__PROTECTED_MODE_ERROR_MASK) {
 		KGSL_CMD_FATAL("ringbuffer protected mode error interrupt\n");
+        /*** QCOM DEBUG CODE ***/
+        ringbuffer_protected_mode_flag = 1;
+        /*** QCOM DEBUG CODE ***/
 		kgsl_yamato_regwrite(rb->device, REG_CP_INT_CNTL, 0);
 	}
 	if (status & CP_INT_CNTL__RESERVED_BIT_ERROR_MASK) {
@@ -163,15 +169,15 @@ static void kgsl_ringbuffer_submit(struct kgsl_ringbuffer *rb)
 
 	GSL_RB_UPDATE_WPTR_POLLING(rb);
 	/* Drain write buffer and data memory barrier */
-	dsb();
-	wmb();
+//	dsb();
+//	wmb();
 
 	/* Memory fence to ensure all data has posted.  On some systems,
 	* like 7x27, the register block is not allocated as strongly ordered
 	* memory.  Adding a memory fence ensures ordering during ringbuffer
 	* submits.*/
 	mb();
-	outer_sync();
+//	outer_sync();
 
 	kgsl_yamato_regwrite(rb->device, REG_CP_RB_WPTR, rb->wptr);
 
@@ -687,6 +693,9 @@ kgsl_ringbuffer_addcmds(struct kgsl_ringbuffer *rb,
 		     (rb->device->memstore.gpuaddr +
 		      KGSL_DEVICE_MEMSTORE_OFFSET(eoptimestamp)));
 	GSL_RB_WRITE(ringcmds, rcmd_gpu, rb->timestamp);
+
+	mb();
+	outer_sync();
 
 	if (!(flags & KGSL_CMD_FLAGS_NO_TS_CMP)) {
 		/* Conditional execution based on memory values */
