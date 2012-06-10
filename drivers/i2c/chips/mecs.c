@@ -34,7 +34,11 @@
 
 #define DEBUG			0
 
+#if defined(CONFIG_MACH_EUROPA)
 #define ECS_DATA_DEV_NAME	"ecompass_data"
+#else
+#define ECS_DATA_DEV_NAME	"magnetic_sensor"
+#endif
 #define ECS_CTRL_DEV_NAME	"ecompass_ctrl"
 
 static int ecs_ctrl_open(struct inode *inode, struct file *file);

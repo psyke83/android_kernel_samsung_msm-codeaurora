@@ -1141,6 +1141,15 @@ menuconfig MSM_CAMERA
 	  Say Y here to enable selecting the video adapters for
 	  Qualcomm msm camera and video encoding
 
+config MSM_CAMERA_EUROPA
+	bool "Qualcomm MSM camera: EUROPA 2.6.32 compatibility mode"
+	depends on MSM_CAMERA && MACH_EUROPA
+	default y
+	help
+	  Say Y here to enable selecting the video adapters for
+	  Qualcomm msm camera and video encoding using the legacy
+	  2.6.32 drivers (GT-I5500 only)
+
 config MSM_CAMERA_DEBUG
 	bool "Qualcomm MSM camera debugging with printk"
 	depends on MSM_CAMERA

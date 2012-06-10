@@ -6,11 +6,21 @@ endif
 ifeq ($(CONFIG_MSM_CAMERA_V4L2),y)
   obj-$(CONFIG_MSM_CAMERA) += msm_isp.o msm.o
 else
-  obj-$(CONFIG_MSM_CAMERA) += msm_camera.o msm_v4l2.o
+  ifeq ($(CONFIG_MSM_CAMERA_EUROPA),y)
+    obj-$(CONFIG_MSM_CAMERA) += msm_camera_europa.o msm_v4l2_europa.o
+  else
+    obj-$(CONFIG_MSM_CAMERA) += msm_camera.o msm_v4l2.o
+  endif
 endif
-obj-$(CONFIG_MSM_CAMERA) += msm_axi_qos.o
-obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
-obj-$(CONFIG_ARCH_MSM_ARM11) += msm_vfe7x.o msm_io7x.o
+ifeq ($(CONFIG_MSM_CAMERA_EUROPA),y)
+  obj-$(CONFIG_MSM_CAMERA) += msm_axi_qos_europa.o
+  obj-$(CONFIG_MSM_CAMERA_FLASH) += flash_europa.o
+  obj-$(CONFIG_ARCH_MSM_ARM11) += msm_vfe7x_europa.o msm_io7x_europa.o
+else
+  obj-$(CONFIG_MSM_CAMERA) += msm_axi_qos.o
+  obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
+  obj-$(CONFIG_ARCH_MSM_ARM11) += msm_vfe7x.o msm_io7x.o
+endif
 obj-$(CONFIG_ARCH_MSM7X30) += msm_vfe31.o msm_io_vfe31.o msm_vpe1.o
 obj-$(CONFIG_ARCH_QSD8X50) += msm_vfe8x.o msm_vfe8x_proc.o msm_io8x.o
 obj-$(CONFIG_ARCH_MSM8X60) += msm_vfe31.o msm_io_8x60.o msm_vpe1.o

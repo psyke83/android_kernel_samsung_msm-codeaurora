@@ -28,7 +28,11 @@
 #include <mach/gpio.h>
 #include "sr200pc10.h"
 
+#ifdef CONFIG_MSM_CAMERA_EUROPA
+#include <mach/camera_europa.h>
+#else
 #include <mach/camera.h>
+#endif
 #include <mach/vreg.h>
 
 #define SENSOR_DEBUG 0

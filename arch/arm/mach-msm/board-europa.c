@@ -60,8 +60,11 @@
 #include <linux/mtd/partitions.h>
 #include <linux/i2c.h>
 #include <linux/android_pmem.h>
+#ifdef CONFIG_MSM_CAMERA_EUROPA
+#include <mach/camera_europa.h>
+#else
 #include <mach/camera.h>
-
+#endif
 #include "devices.h"
 #include "clock.h"
 #include "msm-keypad-devices.h"

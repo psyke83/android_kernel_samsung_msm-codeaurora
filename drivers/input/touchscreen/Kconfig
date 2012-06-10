@@ -687,10 +687,10 @@ config TOUCHSCREEN_SYNAPTICS_I2C_RMI4
 
 config TOUCHSCREEN_SYNAPTICS_I2C_RMI4_DT
 	bool "Fake dual-touch support for Synaptics i2c touchscreen"
-	depends on TOUCHSCREEN_SYNAPTICS_I2C_RMI4
+	depends on TOUCHSCREEN_SYNAPTICS_I2C_RMI4 && MACH_EUROPA
 	help
 	  This enables fake dual-touch support for Synaptics RMI4 over I2C
-	  based touchscreens.
+	  based touchscreens. Tested on GT-I5500 only.
 
 config TOUCHSCREEN_MXT140_I2C_TSP
 	tristate "Atmel mXT140 i2c touchscreen"
