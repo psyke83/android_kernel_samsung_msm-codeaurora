@@ -1363,7 +1363,7 @@ config BT_MSM_PINTEST
 
 config OVERCLOCK_AHB
 	bool "Overclock the AHB-bus with 50% for all frequencies from 480MHz and above."
-	depends on CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
+	depends on MSM_CPU_FREQ_SET_MIN_MAX
 	default n
 	help
 	  Increases the speed of memory read/writes but can cause instability.
