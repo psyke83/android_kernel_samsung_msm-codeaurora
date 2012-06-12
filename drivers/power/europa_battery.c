@@ -1954,7 +1954,7 @@ static int get_batt_info(void)
 #endif
 
 	//Calculate Average Sample
-	//msm_batt_info.battery_level = GetAverageSample(msm_batt_info.battery_level);
+	msm_batt_info.battery_level = GetAverageSample(msm_batt_info.battery_level);
 
 	//printk("[Battery] %s : After Vol    ADC Value =%d \n", __func__, msm_batt_info.battery_level);
 	//printk("[Battery] %s : After Temp ADC Value =%d \n", __func__, msm_batt_info.battery_temp);
