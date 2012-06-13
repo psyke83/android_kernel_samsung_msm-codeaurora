@@ -1,0 +1,13 @@
+config ZRAM
+	tristate "Compressed in-memory swap device (zram)"
+	depends on SWAP && !RAMZSWAP
+	select LZO_COMPRESS
+	select LZO_DECOMPRESS
+	default n
+	help
+	  Creates virtual block devices which can (only) be used as swap
+	  disks. Pages swapped to these disks are compressed and stored in
+	  memory itself.
+
+	  See README for more information.
+	  Project home: http://compcache.googlecode.com/

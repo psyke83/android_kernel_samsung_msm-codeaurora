@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "Updating remote ..."
+git remote update
+
+echo "Rebasing master ..."
+git rebase --onto origin/master master
+
+#echo "Rebasing zsmalloc ..."
+#git rebase --onto master zsmalloc

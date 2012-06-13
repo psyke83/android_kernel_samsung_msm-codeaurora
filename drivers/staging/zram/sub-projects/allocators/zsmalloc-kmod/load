@@ -1,0 +1,5 @@
+#!/bin/bash
+
+sudo insmod ./zsmalloc.ko
+sudo insmod ./zstest.ko
+
