@@ -92,6 +92,17 @@ unsigned char pSocData[]= {
 #endif
 /* firmware - update */
 
+static int fakedt = 0;
+static ssize_t fakedt_show(struct device *dev, struct device_attribute *attr, char *buf);
+static ssize_t fakedt_store( struct device *dev, struct device_attribute *attr, const char *buf, size_t size);
+static DEVICE_ATTR(fakedt	, S_IRUGO | S_IWUSR | S_IWOTH | S_IXOTH, fakedt_show, fakedt_store);
+
+struct class *touch_class;
+EXPORT_SYMBOL(touch_class);
+struct device *synaptics_dev;
+EXPORT_SYMBOL(synaptics_dev);
+
+
 /* sys fs /
 struct class *touch_class;
 EXPORT_SYMBOL(touch_class);
@@ -231,7 +242,7 @@ static void synaptics_ts_work_func(struct work_struct *work)
 	finger = (buf[1] >> 7);
 	
 	if (dtouchs<2){
-	if (finger==1) {   // DT mode
+	if (finger==1 && fakedt) {   // DT mode
 		if (dt_ativar==0) {
 			if (x>120 && y<160){
 				dt_ativar=1;
@@ -285,7 +296,7 @@ static void synaptics_ts_work_func(struct work_struct *work)
 			}
 		}
 	}
-	if (finger==1) {  //GM mode
+	if (finger==1 && fakedt) {  //GM mode
 		if (gm_ativar==0) {
 			if (x>120 && y<160){
 				gm_ativar=1;
@@ -568,6 +579,11 @@ static int synaptics_ts_probe(
 
 	printk(KERN_INFO "synaptics_ts_probe: Start touchscreen %s in %s mode\n", ts->input_dev->name, ts->use_irq ? "interrupt" : "polling");
 
+	touch_class = class_create(THIS_MODULE, "touch");
+	if (IS_ERR(touch_class)) pr_err("Failed to create class(touch)!\n");
+	synaptics_dev = device_create(touch_class, NULL, 0, NULL, "synaptics");
+	if (device_create_file(synaptics_dev, &dev_attr_fakedt) < 0) pr_err("Failed to create device file(%s)!\n", dev_attr_fakedt.attr.name);
+	
 	/* sys fs /
 	touch_class = class_create(THIS_MODULE, "touch");
 	if (IS_ERR(touch_class))
@@ -794,6 +810,13 @@ static void __exit synaptics_ts_exit(void)
 		destroy_workqueue(synaptics_wq);
 }
 
+static ssize_t fakedt_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int n;
+	n=sprintf(buf, "%d", fakedt);
+        return n + 1;
+}
+
 static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	uint8_t i2c_addr = 0x06;
@@ -829,6 +852,17 @@ static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, 
 	sprintf(buf, "%d\n", phone_ver + buf_tmp[1]+(buf_tmp[0]*100) );
 
 	return sprintf(buf, "%s", buf );
+}
+
+static ssize_t fakedt_store(
+		struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	char *after;
+	unsigned long value = simple_strtoul(buf, &after, 10);
+	if (value) fakedt = 1;
+	else fakedt = 0;
+	return size;
 }
 
 /* firmware - update */
