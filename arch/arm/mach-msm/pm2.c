@@ -1626,6 +1626,14 @@ static int msm_pm_enter(suspend_state_t state)
                 if (req_clk[i] == 1)
 		{
                         printk("%s : req clk : #%d clock is alive!!!!!!!!!!!!!!!!!!!!!!\n", __func__, i);
+#if defined(CONFIG_MACH_EUROPA)
+                        if (i==11)
+                        {
+                                printk("%s : req clk : #%d clock is disabled!!!!!!!!!!!!!!!!!!!!!!\n", __func__, i);
+                                tmp_clk = clk_get(NULL, "icodec_tx_clk");
+                                clk_disable(tmp_clk);   
+                        }
+#endif
                         if (i==42)
                         {
                                 tmp_clk = clk_get(NULL, "mdp_lcdc_pclk_clk");

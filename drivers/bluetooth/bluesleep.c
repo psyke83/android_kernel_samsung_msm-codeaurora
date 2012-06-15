@@ -66,14 +66,22 @@
 
 #define BT_POWER_ENABLE_SLEEP
 #define WAKE_GPIO_ACTIVE_HIGH
+#if !defined(CONFIG_MACH_EUROPA)
 #define BTLD_CONTROL_WAKE_GPIO
+#define USE_WAKELOCK
+#else
+#undef BTLD_CONTROL_WAKE_GPIO
+#undef USE_WAKELOCK
+#endif
 
 struct bluesleep_info {
 	unsigned host_wake;
 	unsigned ext_wake;
 	unsigned host_wake_irq;
 	struct uart_port *uport;
+#ifdef USE_WAKELOCK
 	struct wake_lock wake_lock;
+#endif
 };
 
 /* work function */
@@ -187,7 +195,9 @@ void bluesleep_sleep_wakeup(void)
 	
 	if (test_bit(BT_ASLEEP, &flags)) {
 		BT_INFO("waking up...");
+#ifdef USE_WAKELOCK
 		wake_lock(&bsi->wake_lock);
+#endif
 		/* Start the timer */
 		//mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 #ifndef BTLD_CONTROL_WAKE_GPIO 
@@ -220,7 +230,9 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			/* UART clk is not turned off immediately. Release
 			 * wakelock after 500 ms.
 			 */
+#ifdef USE_WAKELOCK
 			wake_lock_timeout(&bsi->wake_lock, HZ / 2);
+#endif
 		} else {
 			mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 			return;
@@ -425,7 +437,9 @@ int bluesleep_start(void)
 	}
 
 	set_bit(BT_PROTO, &flags);
+#ifdef USE_WAKELOCK
 	wake_lock(&bsi->wake_lock);
+#endif
 	return 0;
 fail:
 	del_timer(&tx_timer);
@@ -469,7 +483,9 @@ void bluesleep_stop(void)
 	if (disable_irq_wake(bsi->host_wake_irq))
 		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
 	free_irq(bsi->host_wake_irq, NULL);
+#ifdef USE_WAKELOCK
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
+#endif
 
 #ifdef BTLD_CONTROL_WAKE_GPIO
 		bsi->uport = NULL;
@@ -709,7 +725,9 @@ static int __init bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
+#ifdef USE_WAKELOCK
 	wake_lock_init(&bsi->wake_lock, WAKE_LOCK_SUSPEND, "bluesleep");
+#endif
 #ifdef BTLD_CONTROL_WAKE_GPIO
 	rfkill = rfkill_alloc("bt_sleep", &pdev->dev, RFKILL_TYPE_BLUETOOTH,
 			      &bluetooth_sleep_rfkill_ops,
@@ -774,7 +792,9 @@ static int bluesleep_remove(struct platform_device *pdev)
 
 	gpio_free(bsi->host_wake);
 	gpio_free(bsi->ext_wake);
+#ifdef USE_WAKELOCK
 	wake_lock_destroy(&bsi->wake_lock);
+#endif
 	kfree(bsi);
 	return 0;
 }

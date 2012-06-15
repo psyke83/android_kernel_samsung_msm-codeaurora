@@ -266,6 +266,7 @@ static struct platform_device sec_device_jack = {
 	},
 };
 #endif
+#if defined(CONFIG_SMC91X)
 static struct resource smc91x_resources[] = {
 	[0] = {
 		.start	= 0x9C004300,
@@ -278,6 +279,7 @@ static struct resource smc91x_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+#endif
 
 #ifdef CONFIG_USB_FUNCTION
 static struct usb_mass_storage_platform_data usb_mass_storage_pdata = {
@@ -421,12 +423,14 @@ static int __init board_serialno_setup(char *serialno)
 __setup("androidboot.serialno=", board_serialno_setup);
 #endif
 
+#if defined(CONFIG_SMC91X)
 static struct platform_device smc91x_device = {
 	.name		= "smc91x",
 	.id		= 0,
 	.num_resources	= ARRAY_SIZE(smc91x_resources),
 	.resource	= smc91x_resources,
 };
+#endif
 
 #ifdef CONFIG_USB_FUNCTION
 static struct usb_function_map usb_functions_map[] = {
@@ -964,9 +968,8 @@ static int msm_fb_lcdc_power_save(int on)
 			//gpio_tlmm_config(GPIO_CFG(GPIO_OUT_101, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
 			gpio_set_value(101, 0);
 			mdelay(15);
-			
-			gpio_set_value(101, 1);
-			mdelay(15);
+			//gpio_set_value(101, 1);
+			//mdelay(15);
 		}
 	}
 	return 0;
@@ -1227,6 +1230,9 @@ static int bluetooth_power(int on)
 
 		gpio_set_value(BT_PWR, 0);										/* BT_VREG_CTL */
 
+		if (gpio_get_value(gpio_wlan_reset_n) == 0)
+			wlan_setup_clock(0);
+		
 		for (pin = 0; pin < ARRAY_SIZE(bt_config_power_off); pin++) {
 #if 0 /* FIXME */		
 			rc = gpio_tlmm_config(bt_config_power_off[pin],
@@ -1927,7 +1933,9 @@ static struct platform_device *devices[] __initdata = {
 	&msm_device_i2c,
 	&touch_i2c_gpio_device,
 	&fsa9280_i2c_gpio_device,
+#if defined(CONFIG_SMC91X)
 	&smc91x_device,
+#endif
 	&android_pmem_kernel_ebi1_device,
 	&android_pmem_device,
 	&android_pmem_adsp_device,
@@ -2928,6 +2936,7 @@ static void __init msm_msm7x2x_allocate_memory_regions(void)
 
 static void __init msm7x2x_map_io(void)
 {
+	msm_shared_ram_phys = 0x00100000;
 	msm_map_common_io();
 	msm_msm7x2x_allocate_memory_regions();
 
