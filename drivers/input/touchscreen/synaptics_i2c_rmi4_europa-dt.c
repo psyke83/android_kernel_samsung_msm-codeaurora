@@ -52,9 +52,6 @@ static int dt_ativar = 0;
 static int gm_ativar = 0;
 static int send_msg = 1;
 
-//static long tempo_inic = 0;
-//static long tempo_fim = 0;
-
 static struct workqueue_struct *synaptics_wq;
 
 struct synaptics_ts_data {
@@ -206,13 +203,12 @@ tsp_reset_out:
 static void synaptics_ts_work_func(struct work_struct *work)
 {
 	int ret=0;
-	uint8_t buf[74];
+	uint8_t buf[3];
 	uint8_t i2c_addr = 0x02;
 	uint16_t x=0;
 	uint16_t y=0;
 	uint16_t z=1;
 	int finger = 0;
-	//long tempo=0;
 	
 #ifdef DEBUG_INPUT_REPORT
 	static int prev_finger = 0;
@@ -220,15 +216,6 @@ static void synaptics_ts_work_func(struct work_struct *work)
 	struct synaptics_ts_data *ts = container_of(work, struct synaptics_ts_data, work);
 
 	ret = tsp_i2c_read( i2c_addr, buf, sizeof(buf));
-	
-	/*printk("[TSP] buffers:b0=%x,b1=%x,b2=%x,b3=%x,b4=%x,b5=%x,b6=%x,b7=%x,b8=%x,b9=%x\n",buf[0],buf[1],buf[2],buf[3],buf[4],buf[5],buf[6],buf[7],buf[8],buf[9]);
-	printk("[TSP] buffers:b10=%x,b11=%x,b12=%x,b13=%x,b14=%x,b15=%x,b16=%x,b17=%x,b18=%x,b19=%x\n",buf[10],buf[11],buf[12],buf[13],buf[14],buf[15],buf[16],buf[17],buf[18],buf[19]);
-	printk("[TSP] buffers:b20=%x,b21=%x,b22=%x,b23=%x,b24=%x,b25=%x,b26=%x,b27=%x,b28=%x,b29=%x\n",buf[20],buf[21],buf[22],buf[23],buf[24],buf[25],buf[26],buf[27],buf[28],buf[29]);
-	printk("[TSP] buffers:b30=%x,b31=%x,b32=%x,b33=%x,b34=%x,b35=%x,b36=%x,b37=%x,b38=%x,b39=%x\n",buf[30],buf[31],buf[32],buf[33],buf[34],buf[35],buf[36],buf[37],buf[38],buf[39]);
-	printk("[TSP] buffers:b40=%x,b41=%x,b42=%x,b43=%x,b44=%x,b45=%x,b46=%x,b47=%x,b48=%x,b49=%x\n",buf[40],buf[41],buf[42],buf[43],buf[44],buf[45],buf[46],buf[47],buf[48],buf[49]);
-	printk("[TSP] buffers:b50=%x,b51=%x,b52=%x,b53=%x,b54=%x,b55=%x,b56=%x,b57=%x,b58=%x,b59=%x\n",buf[50],buf[51],buf[52],buf[53],buf[54],buf[55],buf[56],buf[57],buf[58],buf[59]);
-	printk("[TSP] buffers:b60=%x,b61=%x,b62=%x,b63=%x,b64=%x,b65=%x,b66=%x,b67=%x,b68=%x,b69=%x\n",buf[60],buf[61],buf[62],buf[63],buf[64],buf[65],buf[66],buf[67],buf[68],buf[69]);
-	printk("[TSP] buffers:b70=%x,b71=%x,b72=%x,b73=%x\n",buf[70],buf[71],buf[72],buf[73]);*/
 	
 	if (ret <= 0) {
 		printk("[TSP] i2c failed : ret=%d, ln=%d\n",ret, __LINE__);
@@ -350,22 +337,19 @@ static void synaptics_ts_work_func(struct work_struct *work)
 		}
 	}}
 	
-	/*printk("dt_ativar = %d, gm_ativar = %d\n",dt_ativar,gm_ativar);
-	printk("dualtouchs=%d\n",dtouchs);
-	printk("[TSP] coordenadas: x=%d,y=%d,finger=%d\n",x,y,finger);*/
 	if (send_msg==1) {
 	if (dtouchs<2) {
-	  input_report_abs(ts->input_dev, ABS_X, x);
-	  input_report_abs(ts->input_dev, ABS_Y, y);
-	  input_report_abs(ts->input_dev, ABS_PRESSURE, z);
-	  input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, z*10);
-	  input_report_key(ts->input_dev, BTN_TOUCH, finger);
+	  //input_report_abs(ts->input_dev, ABS_X, x);
+	  //input_report_abs(ts->input_dev, ABS_Y, y);
+	  //input_report_abs(ts->input_dev, ABS_PRESSURE, z);
+	  //input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, z*10);
+	  //input_report_key(ts->input_dev, BTN_TOUCH, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
 	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, z*10);
 	  input_mt_sync(ts->input_dev);
-	  input_report_abs(ts->input_dev, ABS_HAT0X, 0);
+	  /*input_report_abs(ts->input_dev, ABS_HAT0X, 0);
 	  input_report_abs(ts->input_dev, ABS_HAT0Y, 0);
 	  input_report_abs(ts->input_dev, ABS_PRESSURE, 0);
 	  input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, 0);
@@ -374,23 +358,23 @@ static void synaptics_ts_work_func(struct work_struct *work)
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, 0);
 	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0);
 	  input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0);
-	  input_mt_sync(ts->input_dev);	}
+	  input_mt_sync(ts->input_dev);*/}
 	else if (dtouchs==2) {
-	  input_report_abs(ts->input_dev, ABS_X, dualx);
-	  input_report_abs(ts->input_dev, ABS_Y, dualy);
-	  input_report_abs(ts->input_dev, ABS_PRESSURE, 1);
-	  input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, 10);
-	  input_report_key(ts->input_dev, BTN_TOUCH, finger);
+	  //input_report_abs(ts->input_dev, ABS_X, dualx);
+	  //input_report_abs(ts->input_dev, ABS_Y, dualy);
+	  //input_report_abs(ts->input_dev, ABS_PRESSURE, 1);
+	  //input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, 10);
+	  //input_report_key(ts->input_dev, BTN_TOUCH, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_X, dualx);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, dualy);
 	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, 10);
 	  input_mt_sync(ts->input_dev);
-	  input_report_abs(ts->input_dev, ABS_HAT0X, x);
-	  input_report_abs(ts->input_dev, ABS_HAT0Y, y);
-	  input_report_abs(ts->input_dev, ABS_PRESSURE, z);
-	  input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, z*10);
-	  input_report_key(ts->input_dev, BTN_2, finger);
+	  //input_report_abs(ts->input_dev, ABS_HAT0X, x);
+	  //input_report_abs(ts->input_dev, ABS_HAT0Y, y);
+	  //input_report_abs(ts->input_dev, ABS_PRESSURE, z);
+	  //input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, z*10);
+	  //input_report_key(ts->input_dev, BTN_2, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
 	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, finger);
@@ -531,22 +515,22 @@ static int synaptics_ts_probe(
 		goto err_input_dev_alloc_failed;
 	}
 	ts->input_dev->name = "synaptics-rmi-touchscreen";
-	set_bit(EV_SYN, ts->input_dev->evbit);
-	set_bit(ABS_X, ts->input_dev->absbit);
-	set_bit(ABS_Y, ts->input_dev->absbit);
-	set_bit(ABS_PRESSURE, ts->input_dev->absbit);
-	set_bit(BTN_TOUCH, ts->input_dev->keybit);
-	set_bit(BTN_2, ts->input_dev->keybit);
-	set_bit(EV_KEY, ts->input_dev->evbit);
+	//set_bit(EV_SYN, ts->input_dev->evbit);
+	//set_bit(ABS_X, ts->input_dev->absbit);
+	//set_bit(ABS_Y, ts->input_dev->absbit);
+	//set_bit(ABS_PRESSURE, ts->input_dev->absbit);
+	//set_bit(BTN_TOUCH, ts->input_dev->keybit);
+	//set_bit(BTN_2, ts->input_dev->keybit);
+	//set_bit(EV_KEY, ts->input_dev->evbit);
 	set_bit(EV_ABS, ts->input_dev->evbit);
 
 	printk(KERN_INFO "synaptics_ts_probe: max_x: 240, max_y: 320\n");
-	input_set_abs_params(ts->input_dev, ABS_X, -1, MAX_X+1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_Y, -1, MAX_Y+1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_TOOL_WIDTH, 0, 15, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_HAT0X, -1, MAX_X+1, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_HAT0Y, -1, MAX_Y+1, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_X, -1, MAX_X+1, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_Y, -1, MAX_Y+1, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_TOOL_WIDTH, 0, 15, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_HAT0X, -1, MAX_X+1, 0, 0);
+	//input_set_abs_params(ts->input_dev, ABS_HAT0Y, -1, MAX_Y+1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, -1, MAX_X+1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, -1, MAX_Y+1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
@@ -610,7 +594,7 @@ static int synaptics_ts_probe(
 
 	HW_ver = buf[1];
 	printk(KERN_INFO "synaptics_ts_probe: Manufacturer ID: %x, HW ver=%d\n", buf[0], HW_ver);
-#if 1
+#if 0
 	if ( ( 0x00 < buf[2]) && (buf[2] < 0x08) )
 	{
 		printk("[TSP] %s, ver SW=%x\n", __func__ , buf[2] );
