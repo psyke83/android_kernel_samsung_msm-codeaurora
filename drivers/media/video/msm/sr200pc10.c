@@ -955,6 +955,11 @@ int sr200pc10_sensor_init(const struct msm_camera_sensor_info *data)
 	if (data)
 		sr200pc10_ctrl->sensordata = data;
 
+	printk("new sr200pc10_sensor_init !!\n");
+	gpio_set_value(0, 0);//RESET	
+	gpio_set_value(1, 0);//STBY 
+	
+	cam_pw(1);
 
 	rc = cam_hw_init();
 	if (rc < 0) 
@@ -1077,7 +1082,7 @@ int sr200pc10_sensor_release(void)
 	sr200pc10_regs_table_exit();
 #endif
 
-
+	cam_pw(0);
 	return rc;
 }
 
@@ -1139,24 +1144,28 @@ static int sr200pc10_sensor_probe(const struct msm_camera_sensor_info *info,
 		goto probe_done;
 	}
 
+	cam_pw(1);
 
 	/* Input MCLK = 24MHz */
 	msm_camio_clk_rate_set(24000000);
 	mdelay(5);
 
 
-#if 0//bestiq
+#if 1//bestiq
 	rc = sr200pc10_sensor_init_probe(info);
 	if (rc < 0)
 		goto probe_done;
 #endif
 
-
+	gpio_set_value(0, 0);//RESET
+	gpio_set_value(1, 0);//STBY
 	cam_pw(0); //TEMP
 
 	s->s_init = sr200pc10_sensor_init;
 	s->s_release = sr200pc10_sensor_release;
 	s->s_config  = sr200pc10_sensor_config;
+	s->s_camera_type = BACK_CAMERA_2D;
+	s->s_mount_angle = 0;
 
 
 
@@ -1167,6 +1176,7 @@ probe_done:
 
 static int __sr200pc10_probe(struct platform_device *pdev)
 {
+	printk("_sr200pc10_probe\n");
 	return msm_camera_drv_start(pdev, sr200pc10_sensor_probe);
 }
 
@@ -1180,6 +1190,7 @@ static struct platform_driver msm_camera_driver = {
 
 static int __init sr200pc10_init(void)
 {
+	printk("sr200pc10_init\n");
 	return platform_driver_register(&msm_camera_driver);
 }
 

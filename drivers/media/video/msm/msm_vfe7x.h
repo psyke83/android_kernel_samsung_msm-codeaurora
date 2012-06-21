@@ -19,11 +19,7 @@
 #ifndef __MSM_VFE7X_H__
 #define __MSM_VFE7X_H__
 #include <media/msm_camera.h>
-#ifdef CONFIG_MSM_CAMERA_EUROPA
-#include <mach/camera_europa.h>
-#else
 #include <mach/camera.h>
-#endif
 
 struct vfe_frame_extra {
 	uint32_t  bl_evencol;
