@@ -28,11 +28,7 @@
 #include <mach/gpio.h>
 #include "sr200pc10.h"
 
-#ifdef CONFIG_MSM_CAMERA_EUROPA
-#include <mach/camera_europa.h>
-#else
 #include <mach/camera.h>
-#endif
 #include <mach/vreg.h>
 
 #define SENSOR_DEBUG 0
@@ -79,6 +75,7 @@ static int16_t sr200pc10_effect = CAMERA_EFFECT_OFF;
 	EXTERNAL DECLARATIONS
 ==============================================================*/
 extern struct sr200pc10_reg sr200pc10_regs;
+extern void pcam_msm_i2c_pwr_mgmt(struct i2c_adapter *adap, int on);
 
 
 /*=============================================================*/
@@ -511,15 +508,23 @@ void cam_pw(int status)
 	    vreg_set_level(vreg_cam_out9,  OUT2800mV);//2800
 	    vreg_set_level(vreg_cam_out10, OUT1800mV);//1800
 
+	    msleep(1); // by new document 2010-5-14		
 	    vreg_enable(vreg_cam_out8);
 	    vreg_enable(vreg_cam_out9);
 	    vreg_enable(vreg_cam_out10);
 
+	    //after power on, below function will be called.
+	    pcam_msm_i2c_pwr_mgmt(sr200pc10_client->adapter, 1);
+
 	}
 	else
 	{
+	    //after power off, below function will be called.
+	    pcam_msm_i2c_pwr_mgmt(sr200pc10_client->adapter, 0);	
+
 	    PCAM_DEBUG("POWER OFF");
 	    vreg_disable(vreg_cam_out8);
+	    udelay(30);
 	    vreg_disable(vreg_cam_out9);
 	    vreg_disable(vreg_cam_out10);
 	}
@@ -957,6 +962,7 @@ int sr200pc10_sensor_init(const struct msm_camera_sensor_info *data)
 
 	printk("new sr200pc10_sensor_init !!\n");
 	gpio_set_value(0, 0);//RESET	
+	mdelay(10);
 	gpio_set_value(1, 0);//STBY 
 	
 	cam_pw(1);
@@ -965,6 +971,7 @@ int sr200pc10_sensor_init(const struct msm_camera_sensor_info *data)
 	if (rc < 0) 
 	{
 		printk("<=PCAM=> cam_hw_init failed!\n");
+		//cam_pw(0); // sleep current issue for sensor disconnection
 		goto init_fail;
 	}
 
@@ -1154,10 +1161,12 @@ static int sr200pc10_sensor_probe(const struct msm_camera_sensor_info *info,
 #if 1//bestiq
 	rc = sr200pc10_sensor_init_probe(info);
 	if (rc < 0)
+		//cam_pw(0); // sleep current issue for sensor disconnection
 		goto probe_done;
 #endif
 
 	gpio_set_value(0, 0);//RESET
+	mdelay(10);
 	gpio_set_value(1, 0);//STBY
 	cam_pw(0); //TEMP
 
