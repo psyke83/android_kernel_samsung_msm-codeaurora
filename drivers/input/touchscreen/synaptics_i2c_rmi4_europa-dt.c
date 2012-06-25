@@ -29,21 +29,10 @@
 #include <linux/device.h>
 #include <linux/i2c/europa_tsp_gpio.h>
 
-#define FIRM_TEST 0
 //#define DEBUG_INPUT_REPORT
-
-/* firmware - update */
-#if FIRM_TEST
-#include "./CYPRESS_I2C_ISSP/issp_define.h"
-#endif
-
-#include <linux/firmware.h>
-/* firmware - update */
 
 #define MAX_X  240 
 #define MAX_Y 320 
-
-#include <linux/time.h>
 
 static uint16_t dualx = 120;
 static uint16_t dualy = 160;
@@ -68,27 +57,7 @@ struct synaptics_ts_data {
 struct synaptics_ts_data *ts_global;
 int tsp_i2c_read(u8 reg, unsigned char *rbuf, int buf_size);
 
-/* firmware - update */
-static int firmware_ret_val = -1;
-static int HW_ver = -1;
-#if FIRM_TEST
-unsigned char g_pTouchFirmware[TSP_TOTAL_LINES*TSP_LINE_LENGTH];
-unsigned int g_FirmwareImageSize = 0;
-
-static void issp_request_firmware(char* update_file_name);
-#endif
-
-int firm_update( void );
-extern int cypress_update( int );
-
-#if FIRM_TEST
-unsigned char pSocData[]= {
-	"fdjkjklijk"
-		//#include "./CYPRESS_I2C_ISSP/Europa_ver02_100218" 	
-};
-#endif
-/* firmware - update */
-
+/* sys fs */
 static int fakedt = 0;
 static ssize_t fakedt_show(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t fakedt_store( struct device *dev, struct device_attribute *attr, const char *buf, size_t size);
@@ -98,21 +67,6 @@ struct class *touch_class;
 EXPORT_SYMBOL(touch_class);
 struct device *synaptics_dev;
 EXPORT_SYMBOL(synaptics_dev);
-
-
-/* sys fs /
-struct class *touch_class;
-EXPORT_SYMBOL(touch_class);
-struct device *firmware_dev;
-EXPORT_SYMBOL(firmware_dev);
-
-static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t firmware_store( struct device *dev, struct device_attribute *attr, const char *buf, size_t size);
-static ssize_t firmware_ret_show(struct device *dev, struct device_attribute *attr, char *buf);
-static ssize_t firmware_ret_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size);
-static DEVICE_ATTR(firmware	, S_IRUGO | S_IWUSR | S_IWOTH | S_IXOTH, firmware_show, firmware_store);
-static DEVICE_ATTR(firmware_ret	, S_IRUGO | S_IWUSR | S_IWOTH | S_IXOTH, firmware_ret_show, firmware_ret_store);
-/* sys fs */
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void synaptics_ts_early_suspend(struct early_suspend *h);
@@ -339,42 +293,18 @@ static void synaptics_ts_work_func(struct work_struct *work)
 	
 	if (send_msg==1) {
 	if (dtouchs<2) {
-	  //input_report_abs(ts->input_dev, ABS_X, x);
-	  //input_report_abs(ts->input_dev, ABS_Y, y);
-	  //input_report_abs(ts->input_dev, ABS_PRESSURE, z);
-	  //input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, z*10);
-	  //input_report_key(ts->input_dev, BTN_TOUCH, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
 	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, z*10);
 	  input_mt_sync(ts->input_dev);
-	  /*input_report_abs(ts->input_dev, ABS_HAT0X, 0);
-	  input_report_abs(ts->input_dev, ABS_HAT0Y, 0);
-	  input_report_abs(ts->input_dev, ABS_PRESSURE, 0);
-	  input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, 0);
-	  input_report_key(ts->input_dev, BTN_2, 0);
-	  input_report_abs(ts->input_dev, ABS_MT_POSITION_X, 0);
-	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, 0);
-	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0);
-	  input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0);
-	  input_mt_sync(ts->input_dev);*/}
+	  }
 	else if (dtouchs==2) {
-	  //input_report_abs(ts->input_dev, ABS_X, dualx);
-	  //input_report_abs(ts->input_dev, ABS_Y, dualy);
-	  //input_report_abs(ts->input_dev, ABS_PRESSURE, 1);
-	  //input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, 10);
-	  //input_report_key(ts->input_dev, BTN_TOUCH, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_X, dualx);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, dualy);
 	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, 10);
 	  input_mt_sync(ts->input_dev);
-	  //input_report_abs(ts->input_dev, ABS_HAT0X, x);
-	  //input_report_abs(ts->input_dev, ABS_HAT0Y, y);
-	  //input_report_abs(ts->input_dev, ABS_PRESSURE, z);
-	  //input_report_abs(ts->input_dev, ABS_TOOL_WIDTH, z*10);
-	  //input_report_key(ts->input_dev, BTN_2, finger);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
 	  input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
 	  input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, finger);
@@ -515,22 +445,9 @@ static int synaptics_ts_probe(
 		goto err_input_dev_alloc_failed;
 	}
 	ts->input_dev->name = "synaptics-rmi-touchscreen";
-	//set_bit(EV_SYN, ts->input_dev->evbit);
-	//set_bit(ABS_X, ts->input_dev->absbit);
-	//set_bit(ABS_Y, ts->input_dev->absbit);
-	//set_bit(ABS_PRESSURE, ts->input_dev->absbit);
-	//set_bit(BTN_TOUCH, ts->input_dev->keybit);
-	//set_bit(BTN_2, ts->input_dev->keybit);
-	//set_bit(EV_KEY, ts->input_dev->evbit);
 	set_bit(EV_ABS, ts->input_dev->evbit);
 
 	printk(KERN_INFO "synaptics_ts_probe: max_x: 240, max_y: 320\n");
-	//input_set_abs_params(ts->input_dev, ABS_X, -1, MAX_X+1, 0, 0);
-	//input_set_abs_params(ts->input_dev, ABS_Y, -1, MAX_Y+1, 0, 0);
-	//input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
-	//input_set_abs_params(ts->input_dev, ABS_TOOL_WIDTH, 0, 15, 0, 0);
-	//input_set_abs_params(ts->input_dev, ABS_HAT0X, -1, MAX_X+1, 0, 0);
-	//input_set_abs_params(ts->input_dev, ABS_HAT0Y, -1, MAX_Y+1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, -1, MAX_X+1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, -1, MAX_Y+1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
@@ -563,45 +480,16 @@ static int synaptics_ts_probe(
 
 	printk(KERN_INFO "synaptics_ts_probe: Start touchscreen %s in %s mode\n", ts->input_dev->name, ts->use_irq ? "interrupt" : "polling");
 
+	/* sys fs */
 	touch_class = class_create(THIS_MODULE, "touch");
 	if (IS_ERR(touch_class)) pr_err("Failed to create class(touch)!\n");
 	synaptics_dev = device_create(touch_class, NULL, 0, NULL, "synaptics");
 	if (device_create_file(synaptics_dev, &dev_attr_fakedt) < 0) pr_err("Failed to create device file(%s)!\n", dev_attr_fakedt.attr.name);
 	
-	/* sys fs /
-	touch_class = class_create(THIS_MODULE, "touch");
-	if (IS_ERR(touch_class))
-		pr_err("Failed to create class(touch)!\n");
-
-	firmware_dev = device_create(touch_class, NULL, 0, NULL, "firmware");
-	if (IS_ERR(firmware_dev))
-		pr_err("Failed to create device(firmware)!\n");
-
-	if (device_create_file(firmware_dev, &dev_attr_firmware) < 0)
-		pr_err("Failed to create device file(%s)!\n", dev_attr_firmware.attr.name);
-	if (device_create_file(firmware_dev, &dev_attr_firmware_ret) < 0)
-		pr_err("Failed to create device file(%s)!\n", dev_attr_firmware_ret.attr.name);
-
-
-
-
-	/* sys fs */
-
 	/* Check point - Firmware */
 	printk("[TSP] %s, ver CY=%x\n", __func__ , buf[0] );
 	printk("[TSP] %s, ver HW=%x\n", __func__ , buf[1] );
 	printk("[TSP] %s, ver SW=%x\n", __func__ , buf[2] );
-
-	HW_ver = buf[1];
-	printk(KERN_INFO "synaptics_ts_probe: Manufacturer ID: %x, HW ver=%d\n", buf[0], HW_ver);
-#if 0
-	if ( ( 0x00 < buf[2]) && (buf[2] < 0x08) )
-	{
-		printk("[TSP] %s, ver SW=%x\n", __func__ , buf[2] );
-		printk("[TSP] %s, firm_update was blocked!!\n", __func__ );
-		//firm_update( );
-	}
-#endif	
 	/* Check point - Firmware */
 
 	return 0;
@@ -801,43 +689,6 @@ static ssize_t fakedt_show(struct device *dev, struct device_attribute *attr, ch
         return n + 1;
 }
 
-static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	uint8_t i2c_addr = 0x06;
-	uint8_t buf_tmp[2] = {0};
-	int phone_ver = 0;
-
-	printk("[TSP] %s\n",__func__);
-
-
-	if ( HW_ver == 1 )
-	{
-		/* for glass */
-		phone_ver = 40;  /* SW Ver.4 - change this value if New firmware be released */ 	
-	}
-	else if( HW_ver == 2 )
-	{
-		/* for acryl */
-		phone_ver = 90;  /* SW Ver.4 - change this value if New firmware be released */ 	
-	}
-	else
-	{
-		printk("[TSP] %s:%d,HW_ver is wrong!!\n", __func__,__LINE__ );
-	}
-
-	tsp_i2c_read( i2c_addr, buf_tmp, sizeof(buf_tmp));
-	printk("[TSP] %s:%d, ver SW=%x, HW=%x\n", __func__,__LINE__, buf_tmp[1], buf_tmp[0] );
-
-	/* below protocol is defined with App. ( juhwan.jeong@samsung.com )
-	   The TSP Driver report like XY as decimal.
-	   The X is the Firmware version what phone has.
-	   The Y is the Firmware version what TSP has. */
-
-	sprintf(buf, "%d\n", phone_ver + buf_tmp[1]+(buf_tmp[0]*100) );
-
-	return sprintf(buf, "%s", buf );
-}
-
 static ssize_t fakedt_store(
 		struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
@@ -848,179 +699,6 @@ static ssize_t fakedt_store(
 	else fakedt = 0;
 	return size;
 }
-
-/* firmware - update */
-static ssize_t firmware_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	char *after;
-
-	unsigned long value = simple_strtoul(buf, &after, 10);	
-	printk(KERN_INFO "[TSP] %s, %d\n", __func__, __LINE__);
-	firmware_ret_val = -1;
-
-	if ( value == 1 )
-	{
-		printk("[TSP] Firmware update start!!\n" );
-
-		//firm_update( );
-#if FIRM_TEST
-		printk("[TSP] start update cypress touch firmware !!\n");
-		g_FirmwareImageSize = CYPRESS_FIRMWARE_IMAGE_SIZE;
-
-		if(g_pTouchFirmware == NULL)
-		{
-			printk("[TSP][ERROR] %s() kmalloc fail !! \n", __FUNCTION__);
-			return -1;
-		}
-
-
-		/* ready for firmware code */
-		size = issp_request_firmware("touch.hex");
-
-		/* firmware update */
-		//	issp_upgrade();
-
-		g_FirmwareImageSize = 0;
-
-		// step.1 power off/on
-
-		// step.2 enable irq
-
-
-#endif
-		return size;
-	}
-
-	return size;
-}
-
-static ssize_t firmware_ret_show(struct device *dev, struct device_attribute *attr, char *buf)
-{	
-	printk("[TSP] %s!\n", __func__);
-
-	return sprintf(buf, "%d", firmware_ret_val );
-}
-
-static ssize_t firmware_ret_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	printk("[TSP] %s, operate nothing!\n", __func__);
-
-	return size;
-}
-
-
-int firm_update( void )
-{
-	printk(KERN_INFO "[TSP] %s, %d\n", __func__, __LINE__);
-
-	printk("[TSP] disable_irq : %d\n", __LINE__ );
-	disable_irq(ts_global->client->irq);
-
-	// TEST
-	//gpio_configure( TSP_SCL, GPIO_CFG_OUTPUT );
-	gpio_tlmm_config(GPIO_CFG( TSP_SCL, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP,GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-
-	if( HW_ver==1 || HW_ver==2 )
-		firmware_ret_val = cypress_update( HW_ver );
-	else	
-	{
-		printk(KERN_INFO "[TSP] %s, %d cypress_update blocked, HW ver=%d\n", __func__, __LINE__, HW_ver);
-		firmware_ret_val = 0; // Fail
-	}
-
-	if( firmware_ret_val )
-		printk(KERN_INFO "[TSP] %s success, %d\n", __func__, __LINE__);
-	else	
-		printk(KERN_INFO "[TSP] %s fail, %d\n", __func__, __LINE__);
-
-	//gpio_configure( TSP_SCL, GPIO_CFG_OUTPUT );
-	gpio_tlmm_config(GPIO_CFG( TSP_SCL, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP,GPIO_CFG_2MA), GPIO_CFG_ENABLE);
-
-	printk("[TSP] enable_irq : %d\n", __LINE__ );
-	enable_irq(ts_global->client->irq);
-
-	return 0;
-} 
-
-#if FIRM_TEST
-static void issp_request_firmware(char* update_file_name)
-{
-	int idx_src = 0;
-	int idx_dst = 0;
-	int line_no = 0;
-	int dummy_no = 0;
-	char buf[2];
-	int ret = 0;
-
-	struct device *dev = &ts_global->input_dev->dev;	
-	const struct firmware * fw_entry;
-
-	printk(KERN_INFO "[TSP] %s, %d\n", __func__, __LINE__);
-	printk("[TSP] firmware file name : %s\n", update_file_name);
-
-	ret = request_firmware(&fw_entry, update_file_name, dev);
-	if ( ret )
-	{
-		printk("[TSP] request_firmware fail, ln=%d\n", ret );
-		return ;
-	}
-	else
-	{
-		printk("[TSP] request_firmware success, ln=%d\n", ret );
-		printk("[TSP][DEBUG] ret=%d, firmware size=%d\n", ret, fw_entry->size);
-		printk("[TSP] %c %c %c %c %c\n", fw_entry->data[0], fw_entry->data[1], fw_entry->data[2], fw_entry->data[3], fw_entry->data[4]);
-	}
-
-	do {
-		if(fw_entry->data[idx_src] == ':') // remove prefix
-		{
-			idx_src+=9;
-			dummy_no++;
-
-			if(dummy_no != line_no+1)
-			{
-				printk("[ERROR] Can not skip semicolon !! line_no(%d), dummy_no(%d)\n", line_no, dummy_no);
-			}
-		}
-		else if(fw_entry->data[idx_src] == '\r') // return code
-		{
-			idx_src+=2; idx_dst--; line_no++;
-
-			if( idx_dst > TSP_LINE_LENGTH*line_no)
-			{
-				printk("[ERROR] length buffer over error !! line_no(%d), idx_dst(%d)\n", line_no, idx_dst);
-			}
-		}
-		else if(fw_entry->data[idx_src] == 0x0a) // return code
-		{
-			idx_src+=1; idx_dst--; line_no++;
-
-			if( idx_dst > TSP_LINE_LENGTH*line_no)
-			{
-				printk("[ERROR] length buffer over error !! line_no(%d), idx_dst(%d)\n", line_no, idx_dst);
-			}
-		}
-		else
-		{
-			sprintf(buf, "%c%c", fw_entry->data[idx_src], fw_entry->data[idx_src+1]);
-			if(idx_dst > TSP_TOTAL_LINES*TSP_LINE_LENGTH)
-			{
-				printk("[ERROR] buffer over error !!  line_no(%d), idx_dst(%d)\n", line_no, idx_dst);
-			}
-			g_pTouchFirmware[idx_dst] = simple_strtol(buf, NULL, 16);
-			idx_src+=2; idx_dst++;
-		}
-	} while ( line_no < TSP_TOTAL_LINES );
-
-	release_firmware(fw_entry);
-}
-#endif
-
-/* firmware - update */
 
 module_init(synaptics_ts_init);
 module_exit(synaptics_ts_exit);
